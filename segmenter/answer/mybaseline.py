@@ -42,49 +42,107 @@ class Pdist(dict):
 # define entry
 class Entry(tuple):
     def __new__(self, word, startposition, logprobability, backpointer):
-        Entry.w = property(operator.itemgetter(1))
-        Entry.sp = property(operator.itemgetter(2))
-        Entry.lp = property(operator.itemgetter(0))
-        Entry.bp = property(operator.itemgetter(3))
-        return tuple.__new__(Entry, (logprobability, word, startposition, backpointer))
+        Entry.w = property(operator.itemgetter(2))
+        Entry.sp = property(operator.itemgetter(3))
+        Entry.lp = property(operator.itemgetter(1))
+        Entry.bp = property(operator.itemgetter(4))
+        return tuple.__new__(Entry, (-logprobability, logprobability, word, startposition, backpointer))
+
+def printentry(entry, processedline):
+    if(entry!=None):
+        # find the highest index
+        printentry(entry.bp, processedline)
+        processedline.append(entry.w)
+
+def sameEntry(entry1, entry2):
+    if(entry1.w == entry2.w and entry1.sp == entry2.sp):
+        return True
+    else:
+        return False
+
+def createEntry(method, word, startposition, logprobability, backpointer):
+    if(method == 1):
+        return Entry(word, startposition, logprobability, backpointer)
+    if(method == 2):
+        return Entry(word, startposition, logprobability * len(word), backpointer)
+
+old = sys.stdout
+sys.stdout = codecs.lookup('utf-8')[-1](sys.stdout)
 
 # the default segmenter does not use any probabilities, but you could ...
 Pw  = Pdist(opts.counts1w)
 
+method = 2
+
 # start my own codes
 # create an empty heap first
 with open(opts.input) as f:
-    flag = True
+    num = 0
     for line in f:
+        # if(num >= 2):
+        #     break
+        # print line
         # initialize the heap
         h = []
         utf8line = unicode(line.strip(), 'utf-8')
         # for each word that matches input at position 0
+        find = False
         for word,freq in Pw.iteritems():
             if(utf8line.find(word) == 0):
-                entry = Entry(word, 0, math.log10(Pw[word]), None)
+                entry = createEntry(method, word, 0, math.log10(Pw[word]), None)
                 heapq.heappush(h, entry)
+                find = True
+        if not find:
+            entry = createEntry(method, utf8line[0], 0, 0, None)
+            heapq.heappush(h, entry)
         # iteratively fill in chart[i] for all i
-        chart = []
-        heapsort(h)
-        if(len(h) == 2 and flag):
-            while(len(h) != 0):
-                tmp = heapq.heappop(h)
-                print tmp.w
-                print tmp.lp
-            flag = False
-            print utf8line
-        # while(h.size != 0):
-        #    h = heapsort(h)
-        #    entry = heap          
+        finalindex = len(utf8line) - 1
+        chart = [None] * len(utf8line)
+        endindex = -1
+        while(len(h)!=0):
+            # entry = top entry in the heap
+            entry = heapq.heappop(h)
+            # get endindex
+            endindex = endindex + len(entry.w)
+            if endindex > finalindex:
+                break
+            # if chart[endindex] has a previous entry
+            if chart[endindex] != None:
+                preventry = chart[endindex]
+                if(entry.lp > preventry.lp):
+                    chart[endindex] = entry
+            else:
+                chart[endindex] = entry
+            find = False
+            for newword, freq in Pw.iteritems():
+                if(utf8line.find(newword) == endindex + 1):
+                    newentry = createEntry(method, newword, endindex + 1, entry.lp + math.log10(Pw[newword]) * len(newword), entry)
+                    checkexist = False
+                    for ele in h:
+                        if sameEntry(ele, newentry):
+                            checkexist = True
+                            break
+                    if not checkexist:
+                        heapq.heappush(h, newentry)
+                    find = True
+            if not find:
+                if (endindex + 1) <= finalindex:
+                    newentry = createEntry(method, utf8line[endindex + 1], endindex + 1, entry.lp, entry)
+                    checkexist = False
+                    for ele in h:
+                        if sameEntry(ele, newentry):
+                            checkexist = True
+                            break
+                    if not checkexist:
+                        heapq.heappush(h, newentry)
+                
+        finalentry = chart[finalindex]
+        processedline = []
+        printentry(finalentry, processedline)
+        print " ".join(processedline)
+        # num += 1              
     
 
-old = sys.stdout
-sys.stdout = codecs.lookup('utf-8')[-1](sys.stdout)
-# ignoring the dictionary provided in opts.counts
-# with open(opts.input) as f:
-#    for line in f:
-#        utf8line = unicode(line.strip(), 'utf-8')
-#        output = [i for i in utf8line]  # segmentation is one word per character in the input
-#         print " ".join(output)
+# old = sys.stdout
+# sys.stdout = codecs.lookup('utf-8')[-1](sys.stdout)
 sys.stdout = old
