@@ -89,7 +89,7 @@ with open(opts.input) as f:
         find = False
         for word,freq in Pw.iteritems():
             if(utf8line.find(word) == 0):
-                entry = createEntry(method, word, 0, math.log10(Pw[word]), None)
+                entry = createEntry(method, word, 0, math.log(Pw[word]), None)
                 heapq.heappush(h, entry)
                 find = True
         if not find:
@@ -116,7 +116,7 @@ with open(opts.input) as f:
             find = False
             for newword, freq in Pw.iteritems():
                 if(utf8line.find(newword) == endindex + 1):
-                    newentry = createEntry(method, newword, endindex + 1, entry.lp + math.log10(Pw[newword]) * len(newword), entry)
+                    newentry = createEntry(method, newword, endindex + 1, entry.lp + math.log(Pw[newword]) * len(newword), entry)
                     checkexist = False
                     for ele in h:
                         if sameEntry(ele, newentry):
