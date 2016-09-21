@@ -41,18 +41,18 @@ class Pdist(dict):
 
 # define entry
 class Entry(tuple):
-    def __new__(self, word, startposition, logprobability, backpointer):
-        Entry.w = property(operator.itemgetter(2))
-        Entry.sp = property(operator.itemgetter(3))
-        Entry.lp = property(operator.itemgetter(1))
+    def __new__(self, minus, word, startposition, logprobability, backpointer):
+        Entry.w = property(operator.itemgetter(1))
+        Entry.sp = property(operator.itemgetter(2))
+        Entry.lp = property(operator.itemgetter(3))
         Entry.bp = property(operator.itemgetter(4))
-        return tuple.__new__(Entry, (-logprobability, logprobability, word, startposition, backpointer))
+        return tuple.__new__(Entry, (-logprobability, word, startposition, logprobability, backpointer))
 
-def printentry(entry, processedline):
-    if(entry!=None):
+def printsegment(index, processedline):
+    if(index!=None):
         # find the highest index
-        printentry(entry.bp, processedline)
-        processedline.append(entry.w)
+        printsegment(chart[index].bp, processedline)
+        processedline.append(chart[index].w)
 
 def sameEntry(entry1, entry2):
     if(entry1.w == entry2.w and entry1.sp == entry2.sp):
@@ -60,11 +60,14 @@ def sameEntry(entry1, entry2):
     else:
         return False
 
+def Weight(word):
+    return len(word)
+
 def createEntry(method, word, startposition, logprobability, backpointer):
     if(method == 1):
-        return Entry(word, startposition, logprobability, backpointer)
+        return Entry(-logprobability, word, startposition, logprobability, backpointer)
     if(method == 2):
-        return Entry(word, startposition, logprobability * len(word), backpointer)
+        return Entry(-logprobability, word, startposition, logprobability/Weight(word), backpointer)
 
 old = sys.stdout
 sys.stdout = codecs.lookup('utf-8')[-1](sys.stdout)
@@ -89,34 +92,42 @@ with open(opts.input) as f:
         find = False
         for word,freq in Pw.iteritems():
             if(utf8line.find(word) == 0):
-                entry = createEntry(method, word, 0, math.log10(Pw[word]), None)
+                entry = createEntry(method, word, 0, math.log10(Pw[word]/Pw.N), None)
                 heapq.heappush(h, entry)
+                # print "push:" , entry.w, entry.lp
                 find = True
         if not find:
             entry = createEntry(method, utf8line[0], 0, 0, None)
             heapq.heappush(h, entry)
+            # print "push:" , entry.w, entry.lp
         # iteratively fill in chart[i] for all i
         finalindex = len(utf8line) - 1
-        chart = [None] * len(utf8line)
         endindex = -1
+        chart = [None] * len(utf8line)
         while(len(h)!=0):
             # entry = top entry in the heap
             entry = heapq.heappop(h)
-            # get endindex
-            endindex = endindex + len(entry.w)
-            if endindex > finalindex:
+            # print "pop:" , entry.w, entry.lp
+            # get currtindex
+            currtindex = entry.sp+len(entry.w)-1
+            if currtindex > finalindex:
                 break
-            # if chart[endindex] has a previous entry
-            if chart[endindex] != None:
-                preventry = chart[endindex]
+            # if chart[currtindex] has a previous entry
+            if chart[currtindex] != None:
+                preventry = chart[currtindex]
                 if(entry.lp > preventry.lp):
-                    chart[endindex] = entry
+                    chart[currtindex] = entry
             else:
-                chart[endindex] = entry
+                chart[currtindex] = entry
+            if currtindex>endindex:
+                endindex = currtindex
+            # for i in range(len(chart)):
+            #     if (chart[i]!=None):
+            #         print "chart[", i,"]:",chart[i]
             find = False
             for newword, freq in Pw.iteritems():
-                if(utf8line.find(newword) == endindex + 1):
-                    newentry = createEntry(method, newword, endindex + 1, entry.lp + math.log10(Pw[newword]) * len(newword), entry)
+                if(utf8line.find(newword, endindex) == endindex + 1):
+                    newentry = createEntry(method, newword, endindex + 1, entry.lp + math.log10(Pw[newword]/Pw.N)/Weight(newword), endindex)
                     checkexist = False
                     for ele in h:
                         if sameEntry(ele, newentry):
@@ -124,10 +135,11 @@ with open(opts.input) as f:
                             break
                     if not checkexist:
                         heapq.heappush(h, newentry)
+                        # print "push:" , newentry.w, newentry.lp
                     find = True
             if not find:
                 if (endindex + 1) <= finalindex:
-                    newentry = createEntry(method, utf8line[endindex + 1], endindex + 1, entry.lp, entry)
+                    newentry = createEntry(method, utf8line[endindex + 1], endindex + 1, entry.lp, endindex)
                     checkexist = False
                     for ele in h:
                         if sameEntry(ele, newentry):
@@ -135,10 +147,10 @@ with open(opts.input) as f:
                             break
                     if not checkexist:
                         heapq.heappush(h, newentry)
+                        # print "push:" , newentry.w, newentry.lp
                 
-        finalentry = chart[finalindex]
         processedline = []
-        printentry(finalentry, processedline)
+        printsegment(finalindex, processedline)
         print " ".join(processedline)
         # num += 1              
     
