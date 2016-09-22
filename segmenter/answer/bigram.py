@@ -40,6 +40,7 @@ class Pdist(dict):
         elif len(key) == 1: return self.missingfn(key, self.N)
         else: return None
 
+
 # define entry
 class Entry(tuple):
     def __new__(self, word, startposition, logprobability, backpointer):
@@ -100,6 +101,7 @@ sys.stdout = codecs.lookup('utf-8')[-1](sys.stdout)
 
 # the default segmenter does not use any probabilities, but you could ...
 Pw  = Pdist(opts.counts1w)
+Pb  = Pdist(opts.counts2w)
 DIGIT = _DIGIT()
 
 method = 2
@@ -122,7 +124,7 @@ with open(opts.input) as f:
         find = False
         for word,freq in Pw.iteritems():
             if(utf8line.find(word) == 0):
-                entry = createEntry(method, word, 0, math.log10(Pw(word)), None)
+                entry = createEntry(method, word, 0, math.log10(Pw[word]/Pw.N), None)
                 heapq.heappush(h, entry)
                 # print "push:" , entry.w, entry.lp
                 find = True
@@ -157,7 +159,7 @@ with open(opts.input) as f:
             find = False
             for newword, freq in Pw.iteritems():
                 if(utf8line.find(newword, endindex) == endindex + 1):
-                    newentry = createEntry(method, newword, endindex + 1, entry.lp + math.log10(Pw(newword)), endindex)
+                    newentry = createEntry(method, newword, endindex + 1, entry.lp + math.log10(Pw[newword]/Pw.N), endindex)
                     checkexist = False
                     for ele in h:
                         if sameEntry(ele, newentry):
