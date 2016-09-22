@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding:UTF-8 -*-
 import sys, codecs, optparse, os
 import heapq, math, operator
 
@@ -42,28 +42,28 @@ class Pdist(dict):
 
 # define entry
 class Entry(tuple):
-    def __new__(self, minus, word, startposition, logprobability, backpointer):
+    def __new__(self, word, startposition, logprobability, backpointer):
         Entry.w = property(operator.itemgetter(1))
         Entry.sp = property(operator.itemgetter(2))
         Entry.lp = property(operator.itemgetter(3))
         Entry.bp = property(operator.itemgetter(4))
         return tuple.__new__(Entry, (-logprobability, word, startposition, logprobability, backpointer))
 
-def allNumber(word):
-    numberSet ={u'０', u'１', u'２', u'３', u'４', u'５', u'６', u'７', u'８', u'９'}
-    for char in word:
-        if char not in numberSet:
-            return False
-    return True
+class _DIGIT:
+    def __init__(self):
+        self.value = [ u'０', u'１', u'２', u'３', u'４', u'５', u'６', u'７', u'８', u'９', u'·']
+    def match(self, word):
+        flag = True
+        for i in range(len(word)):
+            if(word[i] not in self.value):
+                flag = False
+                break
+        return flag
 
 def printsegment(index, processedline):
     if(index!=None):
         # find the highest index
         printsegment(chart[index].bp, processedline)
-        if allNumber(chart[index].w) and len(processedline)>0:
-            if allNumber(processedline[-1]):
-                processedline[-1] = processedline[-1]+chart[index].w
-                return
         processedline.append(chart[index].w)
 
 def sameEntry(entry1, entry2):
@@ -77,15 +77,30 @@ def Weight(word):
 
 def createEntry(method, word, startposition, logprobability, backpointer):
     if(method == 1):
-        return Entry(-logprobability, word, startposition, logprobability, backpointer)
+        return Entry(word, startposition, logprobability, backpointer)
     if(method == 2):
-        return Entry(-logprobability, word, startposition, logprobability/Weight(word), backpointer)
+        return Entry(word, startposition, logprobability/Weight(word), backpointer)
+
+def mergeDigit(line, DIGIT):
+    newline = []
+    newword = []
+    for i, word in enumerate(line):
+        if(DIGIT.match(word) == False and len(newword)!= 0):
+            newline.append("".join(newword))
+            newline.append(word)
+            newword = []
+        elif(DIGIT.match(word) == False):
+            newline.append(word)
+        elif(DIGIT.match(word) == True):
+            newword.append(word)
+    return newline
 
 old = sys.stdout
 sys.stdout = codecs.lookup('utf-8')[-1](sys.stdout)
 
 # the default segmenter does not use any probabilities, but you could ...
 Pw  = Pdist(opts.counts1w)
+DIGIT = _DIGIT()
 
 method = 2
 
@@ -94,18 +109,20 @@ method = 2
 with open(opts.input) as f:
     num = 0
     for line in f:
-        # if(num >= 2):
+        #if(num >= 8):
         #     break
-        # print line
+        #if(num < 7):
+        #    num = num + 1
+        #    continue
         # initialize the heap
         h = []
         utf8line = unicode(line.strip(), 'utf-8')
+        #print "%d:" %num + utf8line
         # for each word that matches input at position 0
         find = False
         for word,freq in Pw.iteritems():
             if(utf8line.find(word) == 0):
-                # print word, Pw[word]
-                entry = createEntry(method, word, 0, math.log10(Pw(word)), None)
+                entry = createEntry(method, word, 0, math.log10(Pw[word]/Pw.N), None)
                 heapq.heappush(h, entry)
                 # print "push:" , entry.w, entry.lp
                 find = True
@@ -140,7 +157,7 @@ with open(opts.input) as f:
             find = False
             for newword, freq in Pw.iteritems():
                 if(utf8line.find(newword, endindex) == endindex + 1):
-                    newentry = createEntry(method, newword, endindex + 1, entry.lp + math.log10(Pw(newword))/Weight(newword), endindex)
+                    newentry = createEntry(method, newword, endindex + 1, entry.lp + math.log10(Pw[newword]/Pw.N), endindex)
                     checkexist = False
                     for ele in h:
                         if sameEntry(ele, newentry):
@@ -164,8 +181,9 @@ with open(opts.input) as f:
                 
         processedline = []
         printsegment(finalindex, processedline)
-        print " ".join(processedline)
-        # num += 1              
+        mergedline = mergeDigit(processedline, DIGIT)
+        print " ".join(mergedline)
+        num += 1              
     
 
 # old = sys.stdout
