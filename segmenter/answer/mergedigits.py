@@ -181,8 +181,8 @@ with open(opts.input) as f:
                 
         processedline = []
         printsegment(finalindex, processedline)
-        mergedline = mergeDigit(processedline, DIGIT)
-        print " ".join(mergedline)
+        #mergedline = mergeDigit(processedline, DIGIT)
+        print " ".join(processedline)
         num += 1              
     
 

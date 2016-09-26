@@ -1,3 +1,4 @@
+# -*- coding:UTF-8 -*-
 import sys, codecs, optparse, os
 import heapq, math, operator
 
@@ -48,6 +49,17 @@ class Entry(tuple):
         Entry.bp = property(operator.itemgetter(4))
         return tuple.__new__(Entry, (-logprobability, logprobability, word, startposition, backpointer))
 
+class _DIGIT:
+    def __init__(self):
+        self.value = [ u'０', u'１', u'２', u'３', u'４', u'５', u'６', u'７', u'８', u'９', u'·']
+    def match(self, word):
+        flag = True
+        for i in range(len(word)):
+            if(word[i] not in self.value):
+                flag = False
+                break
+        return flag
+
 def printentry(entry, processedline):
     if(entry!=None):
         # find the highest index
@@ -60,17 +72,36 @@ def sameEntry(entry1, entry2):
     else:
         return False
 
+def Weight(word):
+    return len(word)
+
 def createEntry(method, word, startposition, logprobability, backpointer):
     if(method == 1):
         return Entry(word, startposition, logprobability, backpointer)
     if(method == 2):
-        return Entry(word, startposition, logprobability * len(word), backpointer)
+        return Entry(word, startposition, logprobability / Weight(word), backpointer)
+
+def mergeDigit(line, DIGIT):
+    newline = []
+    newword = []
+    for i, word in enumerate(line):
+        if(DIGIT.match(word) == False and len(newword)!= 0):
+            newline.append("".join(newword))
+            newline.append(word)
+            newword = []
+        elif(DIGIT.match(word) == False):
+            newline.append(word)
+        elif(DIGIT.match(word) == True):
+            newword.append(word)
+    return newline
 
 old = sys.stdout
 sys.stdout = codecs.lookup('utf-8')[-1](sys.stdout)
+DIGIT = _DIGIT()
 
 # the default segmenter does not use any probabilities, but you could ...
 Pw  = Pdist(opts.counts1w)
+
 
 method = 2
 
@@ -89,7 +120,7 @@ with open(opts.input) as f:
         find = False
         for word,freq in Pw.iteritems():
             if(utf8line.find(word) == 0):
-                entry = createEntry(method, word, 0, math.log(Pw[word]), None)
+                entry = createEntry(method, word, 0, math.log10(Pw(word)), None)
                 heapq.heappush(h, entry)
                 find = True
         if not find:
@@ -103,20 +134,25 @@ with open(opts.input) as f:
             # entry = top entry in the heap
             entry = heapq.heappop(h)
             # get endindex
-            endindex = endindex + len(entry.w)
-            if endindex > finalindex:
+            currentindex = entry.sp + len(entry.w) - 1
+            if currentindex > finalindex:
                 break
+            #endindex = endindex + len(entry.w)
+            #if endindex > finalindex:
+            #    break
             # if chart[endindex] has a previous entry
-            if chart[endindex] != None:
-                preventry = chart[endindex]
+            if chart[currentindex] != None:
+                preventry = chart[currentindex]
                 if(entry.lp > preventry.lp):
-                    chart[endindex] = entry
+                    chart[currentindex] = entry
             else:
-                chart[endindex] = entry
+                chart[currentindex] = entry
             find = False
+            if currentindex > endindex :
+                endindex = currentindex
             for newword, freq in Pw.iteritems():
-                if(utf8line.find(newword) == endindex + 1):
-                    newentry = createEntry(method, newword, endindex + 1, entry.lp + math.log(Pw[newword]) * len(newword), entry)
+                if(utf8line.find(newword, endindex) == endindex + 1):
+                    newentry = createEntry(method, newword, endindex + 1, entry.lp + math.log10(Pw(newword)), entry)
                     checkexist = False
                     for ele in h:
                         if sameEntry(ele, newentry):
@@ -139,7 +175,8 @@ with open(opts.input) as f:
         finalentry = chart[finalindex]
         processedline = []
         printentry(finalentry, processedline)
-        print " ".join(processedline)
+        mergedline = mergeDigit(processedline, DIGIT)
+        print " ".join(mergedline)
         # num += 1              
     
 
