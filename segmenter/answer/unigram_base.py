@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import sys, codecs, optparse, os
 import heapq, math, operator
 
@@ -42,28 +41,18 @@ class Pdist(dict):
 
 # define entry
 class Entry(tuple):
-    def __new__(self, minus, word, startposition, logprobability, backpointer):
-        Entry.w = property(operator.itemgetter(1))
-        Entry.sp = property(operator.itemgetter(2))
-        Entry.lp = property(operator.itemgetter(3))
-        Entry.bp = property(operator.itemgetter(4))
-        return tuple.__new__(Entry, (-logprobability, word, startposition, logprobability, backpointer))
-
-def allNumber(word):
-    numberSet ={u'０', u'１', u'２', u'３', u'４', u'５', u'６', u'７', u'８', u'９'}
-    for char in word:
-        if char not in numberSet:
-            return False
-    return True
+    def __new__(self, minus, count, word, startposition, logprobability, backpointer):
+        Entry.c = property(operator.itemgetter(1))
+        Entry.w = property(operator.itemgetter(2))
+        Entry.sp = property(operator.itemgetter(3))
+        Entry.lp = property(operator.itemgetter(4))
+        Entry.bp = property(operator.itemgetter(5))
+        return tuple.__new__(Entry, (-logprobability, count, word, startposition, logprobability, backpointer))
 
 def printsegment(index, processedline):
     if(index!=None):
         # find the highest index
         printsegment(chart[index].bp, processedline)
-        if allNumber(chart[index].w) and len(processedline)>0:
-            if allNumber(processedline[-1]):
-                processedline[-1] = processedline[-1]+chart[index].w
-                return
         processedline.append(chart[index].w)
 
 def sameEntry(entry1, entry2):
@@ -75,19 +64,24 @@ def sameEntry(entry1, entry2):
 def Weight(word):
     return len(word)
 
-def createEntry(method, word, startposition, logprobability, backpointer):
+def createEntry(method, count, word, startposition, logprobability, backpointer):
     if(method == 1):
-        return Entry(-logprobability, word, startposition, logprobability, backpointer)
+        return Entry(-logprobability, count, word, startposition, logprobability, backpointer)
     if(method == 2):
-        return Entry(-logprobability, word, startposition, logprobability/Weight(word), backpointer)
+        return Entry(-logprobability, count, word, startposition, logprobability, backpointer)
 
 old = sys.stdout
 sys.stdout = codecs.lookup('utf-8')[-1](sys.stdout)
 
 # the default segmenter does not use any probabilities, but you could ...
 Pw  = Pdist(opts.counts1w)
+Pw_bi = Pdist(opts.counts2w)
 
 method = 2
+
+#!
+
+
 
 # start my own codes
 # create an empty heap first
@@ -104,43 +98,55 @@ with open(opts.input) as f:
         find = False
         for word,freq in Pw.iteritems():
             if(utf8line.find(word) == 0):
-                # print word, Pw[word]
-                entry = createEntry(method, word, 0, math.log10(Pw(word)), None)
+                
+                entry = createEntry(method, freq, word, 0, math.log10(Pw[word]/Pw.N), None)
+                #entry = createEntry(method, freq, word, 0, math.log10(Pw[word]/Pw.N), None)
                 heapq.heappush(h, entry)
-                # print "push:" , entry.w, entry.lp
+                #print "push:" , entry.w, entry.lp
                 find = True
         if not find:
-            entry = createEntry(method, utf8line[0], 0, 0, None)
+            entry = createEntry(method, 0.5, utf8line[0], 0, math.log10(0.5/Pw.N), None)
             heapq.heappush(h, entry)
-            # print "push:" , entry.w, entry.lp
+            #print "push:" , entry.w, entry.lp
         # iteratively fill in chart[i] for all i
         finalindex = len(utf8line) - 1
         endindex = -1
-        chart = [None] * len(utf8line)
+        chart = [None] * 2 * len(utf8line)
         while(len(h)!=0):
             # entry = top entry in the heap
+            #print "heap:"
+            #for item in h:
+                #print item.w, item.lp
             entry = heapq.heappop(h)
-            # print "pop:" , entry.w, entry.lp
+            #print "pop:" , entry.w, entry.lp
             # get currtindex
             currtindex = entry.sp+len(entry.w)-1
+            #print "index: " , entry.sp
             if currtindex > finalindex:
                 break
             # if chart[currtindex] has a previous entry
+            #print "current index: " , currtindex , endindex
+            #for i in range(len(chart)-1):
+                #if chart[i] != None:
+                    #print i , chart[i]
             if chart[currtindex] != None:
                 preventry = chart[currtindex]
                 if(entry.lp > preventry.lp):
                     chart[currtindex] = entry
             else:
                 chart[currtindex] = entry
-            if currtindex>endindex:
-                endindex = currtindex
+            #if currtindex>endindex: 
+            endindex = currtindex
             # for i in range(len(chart)):
             #     if (chart[i]!=None):
             #         print "chart[", i,"]:",chart[i]
             find = False
             for newword, freq in Pw.iteritems():
                 if(utf8line.find(newword, endindex) == endindex + 1):
-                    newentry = createEntry(method, newword, endindex + 1, entry.lp + math.log10(Pw(newword))/Weight(newword), endindex)
+                    
+                    newentry = createEntry(method, freq, newword, endindex + 1, entry.lp + math.log10(Pw[newword]/Pw.N), endindex)
+                    
+                    #print "newword:" , newword , math.log10(Pw[newword]/Pw.N)
                     checkexist = False
                     for ele in h:
                         if sameEntry(ele, newentry):
@@ -148,11 +154,11 @@ with open(opts.input) as f:
                             break
                     if not checkexist:
                         heapq.heappush(h, newentry)
-                        # print "push:" , newentry.w, newentry.lp
+                        #print "push:" , newentry.w, newentry.lp
                     find = True
             if not find:
                 if (endindex + 1) <= finalindex:
-                    newentry = createEntry(method, utf8line[endindex + 1], endindex + 1, entry.lp, endindex)
+                    newentry = createEntry(method, 0.5, utf8line[endindex + 1], endindex + 1, entry.lp + math.log10(0.5/Pw.N), endindex)
                     checkexist = False
                     for ele in h:
                         if sameEntry(ele, newentry):
@@ -160,8 +166,11 @@ with open(opts.input) as f:
                             break
                     if not checkexist:
                         heapq.heappush(h, newentry)
-                        # print "push:" , newentry.w, newentry.lp
-                
+                        #print "push:" , newentry.w, newentry.lp
+        #print "final chart:"
+        #for i in range(len(chart)-1):
+            #if chart[i] != None:
+                #print i , chart[i] 
         processedline = []
         printsegment(finalindex, processedline)
         print " ".join(processedline)
