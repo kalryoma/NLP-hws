@@ -38,7 +38,8 @@ class Pdist(dict):
         if key in self: return float(self[key])/float(self.N)
         #else: return self.missingfn(key, self.N)
         elif len(key) == 1: return self.missingfn(key, self.N)
-        else: return None
+        #else: return None
+        else: return 0.000000000000000001
 
 # define entry
 class Entry(tuple):
@@ -101,21 +102,23 @@ DIGIT = _DIGIT()
 
 # the default segmenter does not use any probabilities, but you could ...
 Pw  = Pdist(opts.counts1w)
-
+Pb = Pdist(opts.counts2w)
 
 method = 2
+
+ld = 0.3
 
 # start my own codes
 # create an empty heap first
 with open(opts.input) as f:
     num = 0
     for line in f:
-        # if(num >= 2):
-        #     break
-        # print line
+        #if(num >= 2):
+        #    break
         # initialize the heap
         h = []
         utf8line = unicode(line.strip(), 'utf-8')
+        # print utf8line
         # for each word that matches input at position 0
         find = False
         for word,freq in Pw.iteritems():
@@ -152,7 +155,8 @@ with open(opts.input) as f:
                 endindex = currentindex
             for newword, freq in Pw.iteritems():
                 if(utf8line.find(newword, endindex) == endindex + 1):
-                    newentry = createEntry(method, newword, endindex + 1, entry.lp + math.log10(Pw(newword)), entry)
+                    biword = entry.w + " " + newword
+                    newentry = createEntry(method, newword, endindex + 1, entry.lp + ld * math.log10(Pw(newword)) + (1 - ld) * math.log10(Pb(biword)), entry)
                     checkexist = False
                     for ele in h:
                         if sameEntry(ele, newentry):
@@ -177,7 +181,7 @@ with open(opts.input) as f:
         printentry(finalentry, processedline)
         mergedline = mergeDigit(processedline, DIGIT)
         print " ".join(mergedline)
-        # num += 1              
+        num += 1              
     
 
 # old = sys.stdout
