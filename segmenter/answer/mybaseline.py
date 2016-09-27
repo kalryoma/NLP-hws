@@ -1,6 +1,7 @@
 # -*- coding:UTF-8 -*-
 import sys, codecs, optparse, os
 import heapq, math, operator
+import numpy as np
 
 # optparser : parse command-line
 optparser = optparse.OptionParser()
@@ -35,6 +36,8 @@ class Pdist(dict):
         self.N = float(N or sum(self.itervalues()))
         # for a single word, posibility = 1 / N
         self.missingfn = missingfn or (lambda k, N: 1./N)
+        self.S0 = 0.5
+        self.zero = self.S0 / float(self.N)
 
     def __call__(self, key):
         if key in self: return float(self[key])/float(self.N)
@@ -42,24 +45,50 @@ class Pdist(dict):
         elif len(key) == 1: return self.missingfn(key, self.N)
         #else: return None
         else: 
-            return 0.1 / float(self.N)
+            return self.zero
     def find(self, line, startindex):
         posibility = 0
         matchedword = []
-        for i in range(self.maxlen):
+        for i in range(self.maxlen + 1):
             word = line[startindex:startindex+i]
             if word in self:
                 matchedword.append(word)
         return matchedword
-
+    # aoSmooth, add one Smooth
+    # def aoSmooth(self):
+    # gtSmooth, Good Turing Smooth
+    def gtSmooth(self):
+        maxFreq = 0
+        for word, freq in self.iteritems():
+            if freq > maxFreq:
+                maxFreq = freq
+        Nr = [0] * (maxFreq + 2)
+        for word, freq in self.iteritems():
+            Nr[freq] = Nr[freq] + 1
+        xp = []
+        fp = []
+        for i in range(len(Nr)):
+            if Nr[i] != 0:
+                xp.append(i)
+                fp.append(Nr[i])
+        for i in range(len(Nr)):
+            Nr[i] = np.interp(i, xp, fp)
+        Sr = [0] * (maxFreq + 1)
+        for r in range(maxFreq + 1):
+            if Nr[r]!=0:
+                Sr[r] = 1.0 * (r + 1) * Nr[r + 1] / Nr[r]
+        for word in self.keys():
+            self[word] = Sr[self[word]]
+        self.S0 = Sr[0]
+        self.zero = self.S0/float(self.N)      
 # define entry
 class Entry(tuple):
     def __new__(self, word, startposition, logprobability, backpointer):
-        Entry.w = property(operator.itemgetter(2))
-        Entry.sp = property(operator.itemgetter(3))
-        Entry.lp = property(operator.itemgetter(1))
-        Entry.bp = property(operator.itemgetter(4))
-        return tuple.__new__(Entry, (-logprobability, logprobability, word, startposition, backpointer))
+        Entry.w = property(operator.itemgetter(3))
+        Entry.sp = property(operator.itemgetter(4))
+        Entry.lp = property(operator.itemgetter(2))
+        Entry.bp = property(operator.itemgetter(5))
+        return tuple.__new__(Entry, (startposition, -logprobability, logprobability, word, startposition, backpointer))
 
 class _DIGIT:
     def __init__(self):
@@ -79,11 +108,10 @@ def notPunctuation(word):
     else:
         return True
 
-def printentry(entry, processedline):
-    if(entry!=None):
-        # find the highest index
-        printentry(entry.bp, processedline)
-        processedline.append(entry.w)
+def printsegment(index, processedline):
+    if(index!=None):
+        printsegment(chart[index].bp, processedline)
+        processedline.append(chart[index].w)
 
 def sameEntry(entry1, entry2):
     if(entry1.w == entry2.w and entry1.sp == entry2.sp):
@@ -175,6 +203,9 @@ DIGIT = _DIGIT()
 Pw  = Pdist(opts.counts1w)
 Pb = Pdist(opts.counts2w)
 
+Pw.gtSmooth()
+Pb.gtSmooth()
+
 method = 1
 
 ld = float(opts.ld)
@@ -197,16 +228,17 @@ with open(opts.input) as f:
 
         for word in matchedword:
             biword = "<s> "+word
-            entry = createEntry(method, word, 0, ld * math.log10(Pw(word)) + (1 - ld) * math.log10(Pb(biword)), None)
+            entry = createEntry(method, word, 0, math.log10(Pb(biword)), None)
+            #entry = createEntry(method, word, 0, ld * math.log10(Pw(word)) + (1 - ld) * math.log10(Pb(biword)), None)
             heapq.heappush(h, entry)
         
         if len(matchedword) == 0:
-            entry = createEntry(method, utf8line[0], 0, math.log10(0.5/Pw.N), None)
+            entry = createEntry(method, utf8line[0], 0, math.log10(Pb.zero), None)
             heapq.heappush(h, entry)
         
         # iteratively fill in chart[i] for all i
         finalindex = len(utf8line) - 1
-        chart = [None] * 2 * len(utf8line)
+        chart = [None] * len(utf8line)
         endindex = -1
         while(len(h)!=0):
             # entry = top entry in the heap
@@ -227,7 +259,7 @@ with open(opts.input) as f:
             #print newword
             for newword in newmatchedword:
                 biword = entry.w + " " + newword
-                newentry = createEntry(method, newword, endindex + 1, entry.lp + ld * math.log10(Pw(newword)) + (1 - ld) * math.log10(Pb(biword)), entry)
+                newentry = createEntry(method, newword, endindex + 1, entry.lp + math.log10(Pb(biword) / Pw(entry.w)), endindex)
                 checkexist = False
                 for ele in h:
                     if sameEntry(ele, newentry):
@@ -237,7 +269,7 @@ with open(opts.input) as f:
                     heapq.heappush(h, newentry)
             if len(newmatchedword) == 0:
                 if (endindex + 1) <= finalindex:
-                    newentry = createEntry(method, utf8line[endindex + 1], endindex + 1, entry.lp + math.log10(0.5/Pw.N), entry)
+                    newentry = createEntry(method, utf8line[endindex + 1], endindex + 1, entry.lp + math.log10(Pb.zero/Pw(entry.w)), endindex)
                     checkexist = False
                     for ele in h:
                         if sameEntry(ele, newentry):
@@ -246,15 +278,14 @@ with open(opts.input) as f:
                     if not checkexist:
                         heapq.heappush(h, newentry)
                 
-        finalentry = chart[finalindex]
         processedline = []
-        printentry(finalentry, processedline)
+        printsegment(finalindex, processedline)
         mergedline = mergeDigit(processedline, DIGIT)
         thisparagraph.append(mergedline)
         if(mergedline[1] == u"完"):
             paragraph.append(thisparagraph)
             thisparagraph = []
-        num += 1              
+        #num += 1              
     for thisparagraph in paragraph:
         mergedparagraph = mergeName(thisparagraph)
         for mergedline in mergedparagraph:
