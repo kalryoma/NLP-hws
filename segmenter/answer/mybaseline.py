@@ -15,26 +15,17 @@ optparser.add_option("-l", "--lambda", dest='ld', default=0.5, help="lambda")
 # Pdist is a python dictionary extract from counts1w or counts2w
 class Pdist(dict):
     "A probability distribution estimated from counts in datafile."
-    # read count1
     def __init__(self, filename, sep='\t', N=None, missingfn=None):
         self.maxlen = 0 
         for line in file(filename):
-            # count1: key freq
             (key, freq) = line.split(sep)
-            # convert key to utf8
             try:
                 utf8key = unicode(key, 'utf-8')
             except:
                 raise ValueError("Unexpected error %s" % (sys.exc_info()[0]))
-            # add up numbers of current word
-            # python2 dict.get(key, default) return x[key] or default
             self[utf8key] = self.get(utf8key, 0) + int(freq)
-            # get the maxlen
             self.maxlen = max(len(utf8key), self.maxlen)
-        # total number of freq
-        # what does "or" do???==>self.N=N, if N=None then N=sum(freq)
         self.N = float(N or sum(self.itervalues()))
-        # for a single word, posibility = 1 / N
         self.missingfn = missingfn or (lambda k, N: 1./N)
         self.S0 = 0.5
         self.zero = self.S0 / float(self.N)
@@ -222,18 +213,16 @@ with open(opts.input) as f:
         # initialize the heap
         h = []
         utf8line = unicode(line.strip(), 'utf-8')
-        # print utf8line
         # for each word that matches input at position 0
         matchedword = Pw.find(utf8line, 0)
 
         for word in matchedword:
             biword = "<s> "+word
-            entry = createEntry(method, word, 0, math.log10(Pb(biword)), None)
-            #entry = createEntry(method, word, 0, ld * math.log10(Pw(word)) + (1 - ld) * math.log10(Pb(biword)), None)
+            entry = createEntry(method, word, 0, math.log10(ld * Pb(biword) + (1-ld) * Pw(word)), None)
             heapq.heappush(h, entry)
         
         if len(matchedword) == 0:
-            entry = createEntry(method, utf8line[0], 0, math.log10(Pb.zero), None)
+            entry = createEntry(method, utf8line[0], 0, math.log10(ld * Pb.zero + (1 - ld) * Pw.zero), None)
             heapq.heappush(h, entry)
         
         # iteratively fill in chart[i] for all i
@@ -259,7 +248,7 @@ with open(opts.input) as f:
             #print newword
             for newword in newmatchedword:
                 biword = entry.w + " " + newword
-                newentry = createEntry(method, newword, endindex + 1, entry.lp + math.log10(Pb(biword) / Pw(entry.w)), endindex)
+                newentry = createEntry(method, newword, endindex + 1, entry.lp + math.log10(ld * Pb(biword) / Pw(entry.w) + (1 - ld) * Pw(newword)), endindex)
                 checkexist = False
                 for ele in h:
                     if sameEntry(ele, newentry):
@@ -269,7 +258,7 @@ with open(opts.input) as f:
                     heapq.heappush(h, newentry)
             if len(newmatchedword) == 0:
                 if (endindex + 1) <= finalindex:
-                    newentry = createEntry(method, utf8line[endindex + 1], endindex + 1, entry.lp + math.log10(Pb.zero/Pw(entry.w)), endindex)
+                    newentry = createEntry(method, utf8line[endindex + 1], endindex + 1, entry.lp + math.log10(ld * Pb.zero/Pw(entry.w) + (1 - ld) * Pw.zero), endindex)
                     checkexist = False
                     for ele in h:
                         if sameEntry(ele, newentry):
