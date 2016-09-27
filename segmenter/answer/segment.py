@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import sys, codecs, optparse, os
 import heapq, math, operator
+import numpy as np
 
 # optparser : parse command-line
 optparser = optparse.OptionParser()
@@ -47,7 +48,7 @@ class Entry(tuple):
         Entry.sp = property(operator.itemgetter(2))
         Entry.lp = property(operator.itemgetter(3))
         Entry.bp = property(operator.itemgetter(4))
-        return tuple.__new__(Entry, (-logprobability, word, startposition, logprobability, backpointer))
+        return tuple.__new__(Entry, (startposition, word, startposition, logprobability, backpointer))
 
 def allNumber(word):
     numberSet ={u'０', u'１', u'２', u'３', u'４', u'５', u'６', u'７', u'８', u'９'}
@@ -77,15 +78,36 @@ def Weight(word):
 
 def createEntry(method, word, startposition, logprobability, backpointer):
     if(method == 1):
-        return Entry(-logprobability, word, startposition, logprobability, backpointer)
+        return Entry(startposition, word, startposition, logprobability, backpointer)
     if(method == 2):
-        return Entry(-logprobability, word, startposition, logprobability/Weight(word), backpointer)
+        return Entry(startposition, word, startposition, logprobability/Weight(word), backpointer)
 
 old = sys.stdout
 sys.stdout = codecs.lookup('utf-8')[-1](sys.stdout)
 
 # the default segmenter does not use any probabilities, but you could ...
 Pw  = Pdist(opts.counts1w)
+
+maxfreq = 0
+# Good-Turing Smoothing
+for word, freq in Pw.iteritems():
+    if freq>maxfreq:
+        maxfreq = freq
+Nr = [0]*(maxfreq+2) # all nr
+for word, freq in Pw.iteritems():
+    Nr[freq] = Nr[freq]+1
+xp = []
+fp = []
+for i in range(len(Nr)):
+    if Nr[i]!=0:
+        xp.append(i)
+        fp.append(Nr[i])
+for i in range(len(Nr)):
+    Nr[i] = np.interp(i, xp, fp)
+Sr = [0]*(maxfreq+1)  # all r*
+for r in range(maxfreq+1):
+    if Nr[r]!=0:
+        Sr[r] = 1.0*(r+1)*Nr[r+1]/Nr[r]
 
 method = 2
 
@@ -105,12 +127,13 @@ with open(opts.input) as f:
         for word,freq in Pw.iteritems():
             if(utf8line.find(word) == 0):
                 # print word, Pw[word]
-                entry = createEntry(method, word, 0, math.log10(Pw(word)), None)
+                entry = createEntry(method, word, 0, math.log10(Sr[freq]/Pw.N), None)
+                # entry = createEntry(method, word, 0, math.log10(Pw(word)), None)
                 heapq.heappush(h, entry)
                 # print "push:" , entry.w, entry.lp
                 find = True
         if not find:
-            entry = createEntry(method, utf8line[0], 0, 0, None)
+            entry = createEntry(method, utf8line[0], 0, math.log10(Sr[0]/Pw.N), None)
             heapq.heappush(h, entry)
             # print "push:" , entry.w, entry.lp
         # iteratively fill in chart[i] for all i
@@ -140,7 +163,7 @@ with open(opts.input) as f:
             find = False
             for newword, freq in Pw.iteritems():
                 if(utf8line.find(newword, endindex) == endindex + 1):
-                    newentry = createEntry(method, newword, endindex + 1, entry.lp + math.log10(Pw(newword))/Weight(newword), endindex)
+                    newentry = createEntry(method, newword, endindex + 1, entry.lp + math.log10(Sr[freq]/Pw.N), endindex)
                     checkexist = False
                     for ele in h:
                         if sameEntry(ele, newentry):
@@ -152,7 +175,7 @@ with open(opts.input) as f:
                     find = True
             if not find:
                 if (endindex + 1) <= finalindex:
-                    newentry = createEntry(method, utf8line[endindex + 1], endindex + 1, entry.lp, endindex)
+                    newentry = createEntry(method, utf8line[endindex + 1], endindex + 1, entry.lp+math.log10(Sr[0]/Pw.N), endindex)
                     checkexist = False
                     for ele in h:
                         if sameEntry(ele, newentry):
