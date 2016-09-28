@@ -1,0 +1,1 @@
+In the draft code with unigram, I modified the code by adding smoothing. It made the leaderboard score closer to baseline score. When implenmenting bigram model, I tried to use condition probablity in order to get higher score. Also I tried both add-one smoothing and good-turing smoothing in bigram code. 
