@@ -1,0 +1,4 @@
+# What I did for Homework 1
+* Fixed a bug for our first version based on unigram. The way to match unigram records to the input is fixed to begin from the current index rather than from the first character.
+* Optimize the output of number characters. Numbers are not supposed to be seperated.
+* Add Good-Turing Smoothing with linear interpolation. Change the heap keyword to start position instead of log probability. This makes the dynamic porgraming algorithm more accurate.

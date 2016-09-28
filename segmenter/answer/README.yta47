@@ -1,0 +1,7 @@
+Improved the unigram code by:
+	1. adding smoothing in the case when new word is not found
+	-	tried good-turing smoothing and add-one smoothing
+	2. modified some condition statements
+Improved the leaderboard score from 88.19 to 88.55
+github commit on Sep 22, 2016: "unigram, leaderboard score at 88.553"
+Still working on adding the bigram model...
