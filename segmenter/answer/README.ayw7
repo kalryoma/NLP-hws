@@ -1,0 +1,101 @@
+# My work
+  
+  - Implement our first version based on unigram, get 78.01 local score
+  - Improve running time by improve the way to search possible word 
+  - Implement bigram algorithm, get 81.45 local score
+  - Merge Good-Turing Smoothing into bigram model implemented by Jiahao Ke, get 81.47 local score
+  - Add Jelinek-Mercer Smoothing into bigram model to improve accuracy
+  - Write a bash script to test best lambda for Jelinek-Mercer Smoothing, get best lambda=0.17, get 81.61 local score
+  - Optimize the output by merge digit number, get 81.97 local score
+  - Optimize the output by merge proper noun, get 82.41 local score, 89.747 on Leaderboard
+  - Write group project report 
+
+# Commit Identifiers
+````
+commit ec6bf9863e39df786209cf8e654153caf1a31118
+Author: AprilWong <aprilwang.zju@gmail.com>
+Date:   Tue Sep 27 11:40:42 2016 -0700
+
+    add JM smoothing
+
+commit 5a0b355b134aa620230ee81ed5a1801b2d22bf96
+Author: AprilWong <aprilwang.zju@gmail.com>
+Date:   Mon Sep 26 22:41:25 2016 -0700
+
+    implement unigram, get a lower score
+
+commit ba02d526b57999c9aa59e450bc14756b1f78663e
+Author: AprilWong <aprilwang.zju@gmail.com>
+Date:   Mon Sep 26 15:18:06 2016 -0700
+
+    merge names, hit 89.747 on Leaderboard
+
+commit 9066b09fee73add8ef9be119c9532bbfaa95d1bb
+Merge: 3491f3b 8b57ae9
+Author: AprilWong <aprilwang.zju@gmail.com>
+Date:   Sun Sep 25 23:13:37 2016 -0700
+
+    Merge branch 'master' of https://github.com/AprilWong/NLP-hw
+
+commit 3491f3bd4df59114f17ce447a32165113e3ba6f8
+Author: AprilWong <aprilwang.zju@gmail.com>
+Date:   Sun Sep 25 23:13:26 2016 -0700
+
+    before pull
+
+commit 56b695c4b85fdd431dbc19ad4d4355bf5775514d
+Author: AprilWong <aprilwang.zju@gmail.com>
+Date:   Sun Sep 25 20:56:31 2016 -0700
+
+    fix mybaseline
+
+commit 20dc03e2e0204d3a9780c41da2a3309668134c6f
+Merge: f7c4a96 5439cb6
+Author: AprilWong <aprilwang.zju@gmail.com>
+Date:   Sun Sep 25 18:37:53 2016 -0700
+
+    Merge branch 'master' of https://github.com/anoopsarkar/nlp-class-hw
+
+commit f7c4a963af006264b16c029e19a65f5c945acc68
+Author: AprilWong <aprilwang.zju@gmail.com>
+Date:   Wed Sep 21 17:14:05 2016 -0700
+
+    fix usage of Pdist
+
+commit afa7336e0ac8d2eb2b8b22ad849d32db9acbfd71
+Author: AprilWong <aprilwang.zju@gmail.com>
+Date:   Wed Sep 21 16:36:47 2016 -0700
+
+    merge digits, hit 80.97 for local score
+
+commit 416c60d7cc1028ec0a46032c197b5156ec787ad2
+Merge: 300d600 53ded8e
+Author: AprilWong <aprilwang.zju@gmail.com>
+Date:   Wed Sep 21 12:56:53 2016 -0700
+
+    Merge branch 'master' of https://github.com/AprilWong/NLP-hw
+
+commit 300d6001fa11824e8e975399350ba6577d60b25d
+Author: AprilWong <aprilwang.zju@gmail.com>
+Date:   Wed Sep 21 12:56:46 2016 -0700
+
+    before pull
+
+commit b49c013f204fbb0e1f884c6c366ddafadd33c503
+Author: AprilWong <aprilwang.zju@gmail.com>
+Date:   Mon Sep 19 02:12:03 2016 -0700
+
+    reach 78 today
+
+commit 980eef42fc7ec251f14d0e319b18a0780d02f24b
+Author: AprilWong <aprilwang.zju@gmail.com>
+Date:   Sat Sep 17 22:43:37 2016 -0700
+
+    after sort
+
+commit 6e135a71fcb9d3bd1d7e6a33ab56684b6dcb1a35
+Author: AprilWong <aprilwang.zju@gmail.com>
+Date:   Sat Sep 17 19:55:59 2016 -0700
+
+    add some notes into default
+````
