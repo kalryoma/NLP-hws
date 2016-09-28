@@ -40,7 +40,6 @@ class Pdist(dict):
         else: 
             return self.zero
     def find(self, line, startindex):
-        posibility = 0
         matchedword = []
         for i in range(self.maxlen + 1):
             word = line[startindex:startindex+i]
@@ -108,11 +107,10 @@ class nlpSolution():
         self.DIGIT = _DIGIT()
         self.input = opts.input
         self.text = []
-        self.ld = opts.ld
+        self.ld = float(opts.ld)
         self.chart = []
     def segment(self):
         with open(self.input) as f:
-            num = 0
             paragraph = []
             thisparagraph = []
             for line in f:
