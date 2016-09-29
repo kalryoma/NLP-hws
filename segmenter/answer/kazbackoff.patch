@@ -1,0 +1,38 @@
+diff --git a/segmenter/answer/mybaseline.py b/segmenter/answer/mybaseline.py
+index 4e134cb..6cbb35d 100755
+--- a/segmenter/answer/mybaseline.py
++++ b/segmenter/answer/mybaseline.py
+@@ -99,6 +99,7 @@ class _DIGIT:
+ class nlpSolution():
+     def __init__(self, opts):
+         self.Pw  = Pdist(opts.counts1w)
++        self.PwOrigin = Pdist(opts.counts1w)
+         self.Pb = Pdist(opts.counts2w)
+         self.Pw.gtSmooth()
+         self.Pb.gtSmooth()
+@@ -156,7 +157,24 @@ class nlpSolution():
+                     #print newword
+                     for newword in newmatchedword:
+                         biword = entry.w + " " + newword
+-                        newentry = Entry(newword, endindex + 1, entry.lp + math.log10(self.ld * self.Pb(biword) / self.Pw(entry.w) + (1 - self.ld) * self.Pw(newword)), endindex)
++                        #kaz backoff
++                        sigma = 0
++                        bi = entry.w + " "
++                        found = False
++                        for iterbiword, bifreq in self.Pb.iteritems():
++                            if iterbiword.startswith(bi):
++                                sigma += bifreq
++                                if iterbiword == biword:
++                                    found = True
++                        alpha = 1 - sigma/(self.PwOrigin(entry.w)*self.PwOrigin.N)
++                        cond = alpha * self.Pw(newword)
++                        #print "alpha:", entry.w, alpha, sigma
++                        if found:
++                            newentry = Entry(newword, endindex + 1, entry.lp + math.log10(self.ld * (self.Pb(biword)*self.Pb.N) / (self.PwOrigin(entry.w)*self.PwOrigin.N) + (1 - self.ld) * self.Pw(newword)), endindex)
++                        else:
++                            newentry = Entry(newword, endindex + 1, entry.lp + math.log10(self.ld * cond + (1 - self.ld) * self.Pw(newword)), endindex)
++
++                        #newentry = Entry(newword, endindex + 1, entry.lp + math.log10(self.ld * self.Pb(biword) / self.Pw(entry.w) + (1 - self.ld) * self.Pw(newword)), endindex)
+                         checkexist = False
+                         for ele in h:
+                             if ele==newentry:
