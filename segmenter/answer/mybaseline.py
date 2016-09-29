@@ -105,7 +105,8 @@ class nlpSolution():
         self.DIGIT = _DIGIT()
         self.input = opts.input
         self.text = []
-        self.ld = float(opts.ld)
+        self.ld2 = float(opts.ld) * 10
+        self.ld = 0
         self.chart = []
     def segment(self):
         old = sys.stdout
@@ -115,8 +116,8 @@ class nlpSolution():
             thisparagraph = []
             num = 0
             for line in f:
-                # if(num >= 26):
-                #   break
+                #if(num >= 26):
+                #    break
                 # initialize the heap
                 h = []
                 utf8line = unicode(line.strip(), 'utf-8')
@@ -185,7 +186,8 @@ class nlpSolution():
             mergedtext = []
             for thisparagraph in paragraph:
                 #print "hhhh"
-                mergedparagraph = self.__mergeName(thisparagraph)
+                mergedparagraph0 = self.__mergeSingle(thisparagraph)
+                mergedparagraph = self.__mergeName(mergedparagraph0)
                 mergedtext.append(mergedparagraph)
                 for line in mergedparagraph:
                     print " ".join(line)
@@ -212,13 +214,14 @@ class nlpSolution():
     # def possibility(self, method, word, wordbefore, param):
 
 
-    def __validSingle(self, word):
-        punctuation = [u'０', u'１', u'２', u'３', u'４', u'５', u'６', u'７', u'８',     u'９', u'，', u'“',u'”', u'。', u'，', u'）', u'（', u'、', u'；', u'：']
-        if word in punctuation:
-            return False
-        elif self.Pw(word) > 1.2 * self.Pw.zero:
+    def __validSingle(self, word, method):
+        if method == 0 and self.Pw(word) > 10 * self.Pw.zero:
             return False
         else:
+            punctuation = [u'０', u'１', u'２', u'３', u'４', u'５', u'６', u'７', u'８',     u'９', u'，', u'“',u'”', u'。', u'，', u'）', u'（', u'、', u'；', u'：']
+            if word in punctuation:
+                return False
+            else:
                 return True
 
     def __printsegment(self, index, processedline):
@@ -239,16 +242,70 @@ class nlpSolution():
             elif(self.DIGIT.match(word) == True):
                 newword.append(word)
         return newline
+    def __mergeSingle(self, paragraph):
+        possiblename = {}
+        for line in paragraph:
+            for i, word in enumerate(line):
+                if len(word) == 1 and self.__validSingle(word, 0):
+                    possibleword = word
+                    #print word + str(self.Pw(word))
+                    j = i + 1
+                    while j < len(line) and len(line[j]) ==1 and self.__validSingle(line[j], 0):
+                        possibleword = possibleword + line[j]
+                        if possibleword in possiblename:
+                            possiblename[possibleword] +=1
+                        else:
+                            possiblename[possibleword] = 0
+                        j +=1
 
+        for key in possiblename.keys():
+            flag = True
+            for key2 in possiblename.keys():
+                if key2!= key and key2.find(key)!=-1:
+                    del possiblename[key]
+                    break
+        #print "#3"
+        #for key in possiblename.keys():
+        #    print key + str(possiblename[key])
+        #print "!!!!!!"
+
+        newparagraph = []
+        newline = []
+        for line in paragraph:
+            i = 0
+            while i < len(line):
+                word = line[i]
+                if len(word) == 1:
+                    possibleword = word
+                    j = i + 1
+                    flag = False
+                    while j<len(line) and len(line[j]) == 1:
+                        possibleword = possibleword + line[j]
+                        if possibleword in possiblename:
+                            flag = True
+                            break
+                        j = j + 1
+                    if flag:
+                        i = i + len(possibleword)
+                        newline.append(possibleword)
+                    else:
+                        i = i + 1
+                        newline.append(word)
+                else:
+                    i = i + 1
+                    newline.append(word)
+            newparagraph.append(newline)
+            newline = []
+        return newparagraph
     def __mergeName(self, paragraph):
         possiblename = {}
         for line in paragraph:
             for i, word in enumerate(line):
-                if len(word) == 1 and self.__validSingle(word):
+                if len(word) == 1 and self.__validSingle(word, 1):
                     possibleword = word
                     #print word + str(self.Pw(word))
                     j = i + 1
-                    while j < len(line) and len(line[j]) ==1 and self.__validSingle(line[j]):
+                    while j < len(line) and len(line[j]) ==1 and self.__validSingle(line[j], 1):
                         possibleword = possibleword + line[j]
                         if possibleword in possiblename:
                             possiblename[possibleword] +=1
@@ -269,10 +326,11 @@ class nlpSolution():
         #        del possiblename[key]
                 
 
-        for key in possiblename.keys():
-            possiblename[key] *= (len(key) - 1)
-            if len(key) > 4:
-                possiblename[key] += len(key) - 4
+        
+        #for key in possiblename.keys():
+        #    possiblename[key] *= (len(key) - 1)
+        #    if len(key) > 4:
+        #        possiblename[key] += len(key) - 4
         #    if key.find(u'·'):
         #        possiblename[key] += 2
         
@@ -281,7 +339,12 @@ class nlpSolution():
         #    print key + str(possiblename[key])
 
         for key in possiblename.keys():
-            if possiblename[key] <= 1 or len(key) <= 1:
+            flag = False
+            if possiblename[key] <= 2 or len(key) <= 1:
+                flag = True
+            if len(key) == 2 and possiblename[key] <= 3:
+                flag = True
+            if flag:
                 del possiblename[key]
         
         #print "#2"
@@ -294,7 +357,7 @@ class nlpSolution():
                 if key2!= key and key2.find(key)!=-1:
                     del possiblename[key]
                     break
-        #print "#3"
+        #print "####"
         #for key in possiblename.keys():
         #    print key + str(possiblename[key])
         #print "!!!!!!"
