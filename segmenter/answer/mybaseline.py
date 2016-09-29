@@ -3,8 +3,6 @@ import sys, codecs, optparse, os
 import heapq, math, operator
 import numpy as np
 
-
-
 # optparser : parse command-line
 optparser = optparse.OptionParser()
 optparser.add_option("-c", "--unigramcounts", dest='counts1w', default=os.path.join('data', 'count_1w.txt'), help="unigram counts")
@@ -110,12 +108,15 @@ class nlpSolution():
         self.ld = float(opts.ld)
         self.chart = []
     def segment(self):
+        old = sys.stdout
+        sys.stdout = codecs.lookup('utf-8')[-1](sys.stdout)
         with open(self.input) as f:
             paragraph = []
             thisparagraph = []
+            num = 0
             for line in f:
-                #if(num >= 22):
-                #    break
+                # if(num >= 26):
+                #   break
                 # initialize the heap
                 h = []
                 utf8line = unicode(line.strip(), 'utf-8')
@@ -180,20 +181,29 @@ class nlpSolution():
                 if(mergedline[1] == u"完"):
                     paragraph.append(thisparagraph)
                     thisparagraph = []
-                #num += 1              
+                num += 1              
             mergedtext = []
             for thisparagraph in paragraph:
+                #print "hhhh"
                 mergedparagraph = self.__mergeName(thisparagraph)
                 mergedtext.append(mergedparagraph)
+                for line in mergedparagraph:
+                    print " ".join(line)
             self.text = mergedtext
 
-    def printResult(self):
-        old = sys.stdout
-        sys.stdout = codecs.lookup('utf-8')[-1](sys.stdout)
-        for paragraph in self.text:
-            for line in paragraph:
-                print " ".join(line)
-        sys.stdout = old
+            #for paragraph in self.text:
+            #    for line in paragraph:
+            #        print " ".join(line)
+            sys.stdout = old
+
+    #def printResult(self):
+        #old = sys.stdout
+        #sys.stdout = codecs.lookup('utf-8')[-1](sys.stdout)
+        #for paragraph in self.text:
+        #    for line in paragraph:
+        #        print " ".join(line)
+        #sys.stdout = old
+        #print "haha"
 
     # method = 0 unigram
     # method = 1 bigram
@@ -202,12 +212,14 @@ class nlpSolution():
     # def possibility(self, method, word, wordbefore, param):
 
 
-    def __notPunctuation(self, word):
-        punctuation = [u'０', u'１', u'２', u'３', u'４', u'５', u'６', u'７', u'８',     u'９', u'·', u'，', u'”', u'。', u'，', u'）', u'（', u'、']
+    def __validSingle(self, word):
+        punctuation = [u'０', u'１', u'２', u'３', u'４', u'５', u'６', u'７', u'８',     u'９', u'，', u'“',u'”', u'。', u'，', u'）', u'（', u'、', u'；', u'：']
         if word in punctuation:
             return False
+        elif self.Pw(word) > 1.2 * self.Pw.zero:
+            return False
         else:
-            return True
+                return True
 
     def __printsegment(self, index, processedline):
         if(index!=None):
@@ -232,25 +244,60 @@ class nlpSolution():
         possiblename = {}
         for line in paragraph:
             for i, word in enumerate(line):
-                if len(word) == 1:
+                if len(word) == 1 and self.__validSingle(word):
                     possibleword = word
+                    #print word + str(self.Pw(word))
                     j = i + 1
-                    while j < len(line) and len(line[j]) ==1 and self.__notPunctuation(line[j]):
+                    while j < len(line) and len(line[j]) ==1 and self.__validSingle(line[j]):
                         possibleword = possibleword + line[j]
                         if possibleword in possiblename:
                             possiblename[possibleword] +=1
                         else:
                             possiblename[possibleword] = 0
                         j +=1
+                        
+        #for key in possiblename.keys():
+        #    flag = False
+        #    newkey =[] 
+        #    dotindex = key.find(u'·')
+        #    if dotindex != -1:
+        #        for sw in key:
+        #            if self.Pw(sw) > 10 * self.Pw.zero:
+        #                flag = True
+        #                break
+        #    if flag:
+        #        del possiblename[key]
+                
+
         for key in possiblename.keys():
-            if possiblename[key] <= 1 or len(key) <= 2:
+            possiblename[key] *= (len(key) - 1)
+            if len(key) > 4:
+                possiblename[key] += len(key) - 4
+        #    if key.find(u'·'):
+        #        possiblename[key] += 2
+        
+        #print "#1"
+        #for key in possiblename.keys():
+        #    print key + str(possiblename[key])
+
+        for key in possiblename.keys():
+            if possiblename[key] <= 1 or len(key) <= 1:
                 del possiblename[key]
+        
+        #print "#2"
+        #for key in possiblename.keys():
+        #    print key + str(possiblename[key])
+
         for key in possiblename.keys():
             flag = True
             for key2 in possiblename.keys():
                 if key2!= key and key2.find(key)!=-1:
                     del possiblename[key]
                     break
+        #print "#3"
+        #for key in possiblename.keys():
+        #    print key + str(possiblename[key])
+        #print "!!!!!!"
 
         newparagraph = []
         newline = []
@@ -283,4 +330,4 @@ class nlpSolution():
 
 solution = nlpSolution(opts)
 solution.segment()
-solution.printResult()
+#solution.printResult()
