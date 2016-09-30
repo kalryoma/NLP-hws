@@ -8,6 +8,7 @@
   - Write a bash script to test best lambda for Jelinek-Mercer Smoothing, get best lambda=0.17, get 81.61 local score
   - Optimize the output by merge digit number, get 81.97 local score
   - Optimize the output by merge proper noun, get 82.41 local score, 89.747 on Leaderboard
+  - Optimize the output by merge single word, get 93.36 on Leaderboard
   - Write group project report 
 
 # Commit Identifiers
